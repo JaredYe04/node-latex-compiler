@@ -63,6 +63,8 @@ jobs:
           git pull origin $DEFAULT_BRANCH --rebase || git pull origin $DEFAULT_BRANCH || true
 
       - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -172,10 +174,6 @@ jobs:
             runner: windows-latest
             package: '@node-tectonic-compiler/bin-win32-x64'
           - platform: darwin
-            arch: x64
-            runner: macos-14
-            package: '@node-tectonic-compiler/bin-darwin-x64'
-          - platform: darwin
             arch: arm64
             runner: macos-14
             package: '@node-tectonic-compiler/bin-darwin-arm64'
@@ -198,6 +196,10 @@ jobs:
 
       - name: Install dependencies
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_PLATFORM: ${{ matrix.platform }}
+          FORCE_ARCH: ${{ matrix.arch }}
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -392,6 +394,8 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -415,7 +419,6 @@ jobs:
             
             pkg.optionalDependencies = {
               '@node-tectonic-compiler/bin-win32-x64': '^' + version,
-              '@node-tectonic-compiler/bin-darwin-x64': '^' + version,
               '@node-tectonic-compiler/bin-darwin-arm64': '^' + version,
               '@node-tectonic-compiler/bin-linux-x64': '^' + version
             };

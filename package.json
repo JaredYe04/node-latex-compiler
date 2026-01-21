@@ -23,7 +23,6 @@
   ],
   "optionalDependencies": {
     "@node-tectonic-compiler/bin-win32-x64": "^0.1.0",
-    "@node-tectonic-compiler/bin-darwin-x64": "^0.1.0",
     "@node-tectonic-compiler/bin-darwin-arm64": "^0.1.0",
     "@node-tectonic-compiler/bin-linux-x64": "^0.1.0"
   },
