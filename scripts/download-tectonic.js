@@ -130,7 +130,7 @@ function getCurrentPlatformRequirements () {
 
 /**
  * Match asset to current platform
- * Priority for Windows: gnu > msvc
+ * Priority for Windows: msvc > gnu
  * Priority for Linux: gnu > musl
  */
 function matchAsset (assetInfo, requirements) {
@@ -155,11 +155,11 @@ function scoreAsset (assetInfo, requirements) {
   
   let score = 100
   
-  // Windows: prefer gnu over msvc
+  // Windows: prefer msvc over gnu (more reliable, no runtime dependencies)
   if (requirements.platform === 'win32') {
-    if (assetInfo.toolchain === 'gnu') {
+    if (assetInfo.toolchain === 'msvc') {
       score += 10
-    } else if (assetInfo.toolchain === 'msvc') {
+    } else if (assetInfo.toolchain === 'gnu') {
       score += 5
     }
   }
@@ -267,11 +267,69 @@ function downloadFile (url, outputPath) {
 function extractArchive (archivePath, extractDir) {
   if (PLATFORM === 'win32') {
     // Windows: use PowerShell to extract ZIP
-    const extractScript = `
-      Add-Type -AssemblyName System.IO.Compression.FileSystem
-      [System.IO.Compression.ZipFile]::ExtractToDirectory("${archivePath.replace(/\\/g, '/')}", "${extractDir.replace(/\\/g, '/')}")
-    `
-    execSync(`powershell -Command "${extractScript}"`, { stdio: 'inherit' })
+    // Use single quotes and proper escaping
+    const extractScript = `$archive = '${archivePath.replace(/'/g, "''")}'; $dest = '${extractDir.replace(/'/g, "''")}'; Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory($archive, $dest)`
+    
+    try {
+      execSync(`powershell -NoProfile -Command "${extractScript}"`, { 
+        stdio: 'inherit',
+        cwd: __dirname 
+      })
+      
+      // Verify extraction worked
+      if (!fs.existsSync(extractDir)) {
+        throw new Error(`Extraction directory does not exist: ${extractDir}`)
+      }
+      
+      const entries = fs.readdirSync(extractDir)
+      if (entries.length === 0) {
+        throw new Error(`Extraction directory is empty: ${extractDir}`)
+      }
+      
+      console.log(`Extracted ${entries.length} entries to ${extractDir}`)
+    } catch (error) {
+      console.error('PowerShell extraction failed, trying alternative method...')
+      // Fallback: use yauzl if available, or try a different approach
+      try {
+        // Try using yauzl (if installed) or use a simpler PowerShell approach
+        const yauzl = require('yauzl')
+        return new Promise((resolve, reject) => {
+          yauzl.open(archivePath, { lazyEntries: true }, (err, zipfile) => {
+            if (err) return reject(err)
+            zipfile.readEntry()
+            zipfile.on('entry', (entry) => {
+              if (/\/$/.test(entry.fileName)) {
+                // Directory entry
+                const dirPath = path.join(extractDir, entry.fileName)
+                if (!fs.existsSync(dirPath)) {
+                  fs.mkdirSync(dirPath, { recursive: true })
+                }
+                zipfile.readEntry()
+              } else {
+                // File entry
+                zipfile.openReadStream(entry, (err, readStream) => {
+                  if (err) return reject(err)
+                  const filePath = path.join(extractDir, entry.fileName)
+                  const dir = path.dirname(filePath)
+                  if (!fs.existsSync(dir)) {
+                    fs.mkdirSync(dir, { recursive: true })
+                  }
+                  const writeStream = fs.createWriteStream(filePath)
+                  readStream.pipe(writeStream)
+                  writeStream.on('close', () => {
+                    zipfile.readEntry()
+                  })
+                })
+              }
+            })
+            zipfile.on('end', resolve)
+            zipfile.on('error', reject)
+          })
+        })
+      } catch (e) {
+        throw new Error(`Failed to extract archive: ${error.message}. Install yauzl for better extraction support.`)
+      }
+    }
   } else {
     // Unix: use tar
     execSync(`tar -xzf "${archivePath}" -C "${extractDir}"`, { stdio: 'inherit' })
@@ -356,25 +414,75 @@ async function main () {
     const executableName = PLATFORM === 'win32' ? 'tectonic.exe' : 'tectonic'
     let foundExecutable = null
     
-    function findExecutable (dir) {
+    function findExecutable (dir, depth = 0) {
+      if (depth > 10) return null // Prevent infinite recursion
+      
       const files = fs.readdirSync(dir)
       for (const file of files) {
         const fullPath = path.join(dir, file)
         const stat = fs.statSync(fullPath)
         if (stat.isDirectory()) {
-          const found = findExecutable(fullPath)
+          const found = findExecutable(fullPath, depth + 1)
           if (found) return found
-        } else if (file === executableName) {
-          return fullPath
+        } else {
+          // Case-insensitive match for Windows
+          if (PLATFORM === 'win32') {
+            if (file.toLowerCase() === executableName.toLowerCase()) {
+              return fullPath
+            }
+          } else {
+            if (file === executableName) {
+              return fullPath
+            }
+          }
         }
       }
       return null
     }
     
+    // Debug: list all files in extracted directory
+    function listAllFiles (dir, prefix = '') {
+      const allFiles = []
+      function walk (currentDir, depth = 0) {
+        if (depth > 10) return
+        try {
+          const entries = fs.readdirSync(currentDir)
+          for (const entry of entries) {
+            const fullPath = path.join(currentDir, entry)
+            const stat = fs.statSync(fullPath)
+            if (stat.isFile()) {
+              allFiles.push(fullPath)
+            } else if (stat.isDirectory()) {
+              walk(fullPath, depth + 1)
+            }
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+      walk(dir)
+      return allFiles
+    }
+    
+    console.log('Searching for executable in extracted files...')
     foundExecutable = findExecutable(extractDir)
     
     if (!foundExecutable) {
-      throw new Error(`Tectonic executable not found in archive`)
+      console.log('Listing all extracted files:')
+      const allFiles = listAllFiles(extractDir)
+      allFiles.forEach(file => {
+        console.log(`  ${file}`)
+      })
+      // Also try to find any .exe file
+      const exeFiles = allFiles.filter(f => f.toLowerCase().endsWith('.exe'))
+      if (exeFiles.length > 0) {
+        console.log(`\nFound .exe files: ${exeFiles.join(', ')}`)
+        // Try the first one
+        foundExecutable = exeFiles[0]
+        console.log(`Using: ${foundExecutable}`)
+      } else {
+        throw new Error(`Tectonic executable (${executableName}) not found in archive. Found ${allFiles.length} files total.`)
+      }
     }
     
     // Copy to bin directory

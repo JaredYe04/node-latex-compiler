@@ -36,7 +36,7 @@ async function testFileCompilation () {
   try {
     const result = await compile({
       texFile: texFile,
-      outputDir: testDir
+      outputDir: testDir  // Explicitly set outputDir to test-output
     })
     
     if (result.status === 'success' && result.pdfPath) {
@@ -64,11 +64,14 @@ async function testTextCompilation () {
   console.log('\n📝 Test 2: Compile from text string')
   
   const testDir = path.join(__dirname, '..', 'test-output')
+  if (!fs.existsSync(testDir)) {
+    fs.mkdirSync(testDir, { recursive: true })
+  }
   
   try {
     const result = await compile({
       tex: TEST_TEX,
-      outputDir: testDir,
+      outputDir: testDir,  // Explicitly set outputDir to test-output
       outputFile: path.join(testDir, 'test-text.pdf')
     })
     

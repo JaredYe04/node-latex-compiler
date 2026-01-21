@@ -1,8 +1,11 @@
 node_modules/
 test-output/
 temp-download/
+temp/
 bin/
 *.log
 .DS_Store
 package-lock.json
+__temp_compile_*.pdf
+__temp_compile_*.tex
 

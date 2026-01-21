@@ -8,10 +8,26 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x]
+        include:
+          - platform: linux
+            arch: x64
+            runner: ubuntu-latest
+            node-version: '20.x'
+          - platform: win32
+            arch: x64
+            runner: windows-latest
+            node-version: '20.x'
+          - platform: darwin
+            arch: x64
+            runner: macos-14
+            node-version: '20.x'
+          - platform: darwin
+            arch: arm64
+            runner: macos-14
+            node-version: '20.x'
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout code
@@ -23,6 +39,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Install dependencies
+        shell: bash
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -31,10 +48,95 @@ jobs:
           fi
 
       - name: Download Tectonic binary
+        shell: bash
         run: |
-          node scripts/download-tectonic.js || echo "Binary download failed, continuing..."
+          echo "📥 Downloading Tectonic binary for ${{ matrix.platform }} ${{ matrix.arch }}..."
+          node scripts/download-tectonic.js || {
+            echo "❌ Binary download failed"
+            exit 1
+          }
 
-      - name: Run tests
+      - name: Verify binary exists
+        shell: bash
         run: |
-          npm test || echo "Tests failed, but continuing..."
+          if [ "${{ matrix.platform }}" = "win32" ]; then
+            BINARY="bin/${{ matrix.platform }}-${{ matrix.arch }}/tectonic.exe"
+          else
+            BINARY="bin/${{ matrix.platform }}-${{ matrix.arch }}/tectonic"
+          fi
+          
+          if [ ! -f "$BINARY" ]; then
+            echo "❌ Error: Binary not found at $BINARY"
+            exit 1
+          fi
+          
+          echo "✅ Binary found at $BINARY"
+          
+          # Verify binary works
+          if [ "${{ matrix.platform }}" = "win32" ]; then
+            "$BINARY" --help > /dev/null 2>&1 || {
+              echo "❌ Binary verification failed"
+              exit 1
+            }
+          else
+            chmod +x "$BINARY"
+            "$BINARY" --help > /dev/null 2>&1 || {
+              echo "❌ Binary verification failed"
+              exit 1
+            }
+          fi
+          
+          echo "✅ Binary verification passed"
+
+      - name: Run compilation tests
+        shell: bash
+        run: |
+          echo "🧪 Running compilation tests on ${{ matrix.platform }} ${{ matrix.arch }}..."
+          node scripts/test-compilation.js || {
+            echo "❌ Tests failed"
+            exit 1
+          }
+          echo "✅ All tests passed"
+
+      - name: Verify test output
+        shell: bash
+        run: |
+          TEST_OUTPUT_DIR="test-output"
+          if [ ! -d "$TEST_OUTPUT_DIR" ]; then
+            echo "❌ Test output directory not found"
+            exit 1
+          fi
+          
+          PDF_FILES=$(find "$TEST_OUTPUT_DIR" -name "*.pdf" 2>/dev/null || echo "")
+          if [ -z "$PDF_FILES" ]; then
+            echo "❌ No PDF files found in test output"
+            exit 1
+          fi
+          
+          echo "✅ Found PDF files in test output:"
+          echo "$PDF_FILES"
+          
+          # Verify PDF files are not empty
+          for pdf in $PDF_FILES; do
+            if [ ! -s "$pdf" ]; then
+              echo "❌ PDF file is empty: $pdf"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All PDF files are valid"
+
+      - name: Check for temporary files in root
+        shell: bash
+        run: |
+          # Check if any temporary files were left in root directory
+          TEMP_FILES=$(find . -maxdepth 1 -name "__temp_compile_*" 2>/dev/null || echo "")
+          if [ -n "$TEMP_FILES" ]; then
+            echo "⚠️  Warning: Temporary files found in root directory:"
+            echo "$TEMP_FILES"
+            echo "These should be in the temp/ directory"
+            # Don't fail the build, but warn
+          else
+            echo "✅ No temporary files in root directory"
+          fi
 
