@@ -209,6 +209,8 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_PLATFORM: ${{ matrix.platform }}
+          FORCE_ARCH: ${{ matrix.arch }}
         run: |
           echo "📥 Downloading Tectonic binary for ${{ matrix.platform }} ${{ matrix.arch }}..."
           node scripts/download-tectonic.js || {

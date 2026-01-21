@@ -111,10 +111,12 @@ function parseAssetInfo (filename) {
 
 /**
  * Get current platform requirements
+ * Allows override via environment variables for CI/CD
  */
 function getCurrentPlatformRequirements () {
-  const platform = PLATFORM
-  let arch = ARCH
+  // Allow override via environment variables (for CI/CD)
+  const platform = process.env.FORCE_PLATFORM || PLATFORM
+  let arch = process.env.FORCE_ARCH || ARCH
   
   // Normalize arch
   if (arch === 'x64' || arch === 'amd64') {
@@ -123,6 +125,11 @@ function getCurrentPlatformRequirements () {
     arch = 'arm64'
   } else if (arch === 'ia32' || arch === 'x86') {
     arch = 'ia32'
+  }
+  
+  // Log if overridden
+  if (process.env.FORCE_PLATFORM || process.env.FORCE_ARCH) {
+    console.log(`⚠️  Using forced platform/arch: ${platform} ${arch} (detected: ${PLATFORM} ${ARCH})`)
   }
   
   return { platform, arch }
