@@ -365,6 +365,7 @@ async function main () {
   const isLatest = args.includes('--latest')
   
   console.log(`Fetching Tectonic continuous release for ${PLATFORM} ${ARCH}...`)
+  console.log(`Detected platform: ${PLATFORM}, arch: ${ARCH}`)
   
   try {
     // Fetch assets from GitHub API
@@ -382,6 +383,12 @@ async function main () {
         return info
       })
       .filter(info => info !== null)
+    
+    // Debug: show parsed assets
+    console.log(`Parsed ${assetInfos.length} assets:`)
+    assetInfos.forEach(info => {
+      console.log(`  - ${info.filename}: platform=${info.platform}, arch=${info.arch}, toolchain=${info.toolchain || 'default'}`)
+    })
     
     // Get current platform requirements
     const requirements = getCurrentPlatformRequirements()
@@ -411,6 +418,8 @@ async function main () {
     const extractDir = path.join(tempDir, 'extracted')
     const binDir = path.join(__dirname, '..', 'bin', `${requirements.platform}-${requirements.arch}`)
     
+    console.log(`Binary will be installed to: ${binDir}`)
+    
     // Create directories
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true })
@@ -420,6 +429,9 @@ async function main () {
     }
     if (!fs.existsSync(binDir)) {
       fs.mkdirSync(binDir, { recursive: true })
+      console.log(`Created bin directory: ${binDir}`)
+    } else {
+      console.log(`Bin directory already exists: ${binDir}`)
     }
     
     // Download
@@ -514,14 +526,22 @@ async function main () {
     
     // Copy to bin directory
     const targetPath = path.join(binDir, executableName)
+    console.log(`Copying binary from ${foundExecutable} to ${targetPath}`)
     fs.copyFileSync(foundExecutable, targetPath)
     
     // Make executable on Unix
     if (PLATFORM !== 'win32') {
       fs.chmodSync(targetPath, 0o755)
+      console.log(`Made binary executable: ${targetPath}`)
     }
     
-    console.log(`✅ Tectonic binary installed to: ${targetPath}`)
+    // Verify the file was copied successfully
+    if (!fs.existsSync(targetPath)) {
+      throw new Error(`Failed to copy binary to ${targetPath}`)
+    }
+    
+    const stats = fs.statSync(targetPath)
+    console.log(`✅ Tectonic binary installed to: ${targetPath} (${stats.size} bytes)`)
     
     // Cleanup (non-blocking to avoid cancellation issues in CI)
     // Use setImmediate to make cleanup async and non-blocking
