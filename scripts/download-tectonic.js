@@ -293,7 +293,8 @@ function extractArchive (archivePath, extractDir) {
     try {
       execSync(`powershell -NoProfile -Command "${extractScript}"`, { 
         stdio: 'inherit',
-        cwd: __dirname 
+        cwd: __dirname,
+        timeout: 60000  // 60 second timeout
       })
       
       // Verify extraction worked
@@ -428,7 +429,13 @@ async function main () {
     
     // Extract
     console.log('Extracting archive...')
-    extractArchive(archivePath, extractDir)
+    try {
+      extractArchive(archivePath, extractDir)
+    } catch (error) {
+      // If extraction fails, try to continue anyway
+      console.warn('Extraction warning:', error.message)
+      // Don't throw, let the findExecutable handle it
+    }
     
     // Find tectonic executable in extracted files
     const executableName = PLATFORM === 'win32' ? 'tectonic.exe' : 'tectonic'
@@ -516,8 +523,20 @@ async function main () {
     
     console.log(`✅ Tectonic binary installed to: ${targetPath}`)
     
-    // Cleanup
-    fs.rmSync(tempDir, { recursive: true, force: true })
+    // Cleanup (non-blocking to avoid cancellation issues in CI)
+    // Use setImmediate to make cleanup async and non-blocking
+    setImmediate(() => {
+      try {
+        if (fs.existsSync(tempDir)) {
+          fs.rmSync(tempDir, { recursive: true, force: true })
+          console.log('✅ Cleanup complete')
+        }
+      } catch (cleanupError) {
+        // Ignore cleanup errors - binary is already installed successfully
+        // Log as warning but don't fail - this is non-critical
+        console.warn('⚠️  Cleanup warning (non-critical):', cleanupError.message)
+      }
+    })
     
     console.log('✅ Download complete')
   } catch (error) {
