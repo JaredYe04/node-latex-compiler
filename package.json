@@ -1,0 +1,47 @@
+{
+  "name": "node-tectonic-compiler",
+  "version": "0.1.0",
+  "tectonicVersion": "0.14.1",
+  "description": "Node.js Tectonic LaTeX compiler with automatic binary download. Supports multiple input/output formats (file, text, buffer)",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaredYe04/node-tectonic-compiler.git"
+  },
+  "engines": {
+    "node": ">= 14.x"
+  },
+  "keywords": [
+    "latex",
+    "tectonic",
+    "tex",
+    "pdf",
+    "compiler",
+    "latex-compiler",
+    "document-compiler"
+  ],
+  "optionalDependencies": {
+    "@node-tectonic-compiler/bin-win32-x64": "^0.1.0",
+    "@node-tectonic-compiler/bin-darwin-x64": "^0.1.0",
+    "@node-tectonic-compiler/bin-darwin-arm64": "^0.1.0",
+    "@node-tectonic-compiler/bin-linux-x64": "^0.1.0"
+  },
+  "scripts": {
+    "test": "node scripts/test-compilation.js",
+    "test:local": "node scripts/test-compilation.js",
+    "download": "node scripts/download-tectonic.js",
+    "prepublish": "node scripts/download-tectonic.js --latest || echo 'Binary download failed, continuing...'"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "lib/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+
