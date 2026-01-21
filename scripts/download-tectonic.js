@@ -183,11 +183,21 @@ function fetchReleaseAssets () {
   return new Promise((resolve, reject) => {
     const url = `${GITHUB_API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/releases/tags/${RELEASE_TAG}`
     
+    // Get GitHub token from environment (for CI/CD)
+    const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+    
+    const headers = {
+      'User-Agent': 'node-tectonic-compiler',
+      'Accept': 'application/vnd.github.v3+json'
+    }
+    
+    // Add Authorization header if token is available
+    if (githubToken) {
+      headers['Authorization'] = `token ${githubToken}`
+    }
+    
     https.get(url, {
-      headers: {
-        'User-Agent': 'node-tectonic-compiler',
-        'Accept': 'application/vnd.github.v3+json'
-      }
+      headers: headers
     }, (res) => {
       let data = ''
       
@@ -221,11 +231,21 @@ function downloadFile (url, outputPath) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(outputPath)
     
+    // Get GitHub token from environment (for CI/CD)
+    const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+    
+    const headers = {
+      'User-Agent': 'node-tectonic-compiler',
+      'Accept': 'application/octet-stream'
+    }
+    
+    // Add Authorization header if token is available
+    if (githubToken) {
+      headers['Authorization'] = `token ${githubToken}`
+    }
+    
     https.get(url, {
-      headers: {
-        'User-Agent': 'node-tectonic-compiler',
-        'Accept': 'application/octet-stream'
-      }
+      headers: headers
     }, (response) => {
       if (response.statusCode === 302 || response.statusCode === 301) {
         // Follow redirect
