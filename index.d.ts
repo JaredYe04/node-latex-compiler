@@ -31,14 +31,14 @@ export interface CompilerOptions {
   tectonicPath?: string;
 }
 
-export declare class TectonicCompiler {
+export declare class LatexCompiler {
   constructor(options?: CompilerOptions);
   isAvailable(): boolean;
   getVersion(): Promise<string | null>;
   compile(config: CompileConfig): Promise<CompileResult>;
 }
 
-export declare function createCompiler(options?: CompilerOptions): TectonicCompiler;
+export declare function createCompiler(options?: CompilerOptions): LatexCompiler;
 export declare function compile(config: CompileConfig): Promise<CompileResult>;
 export declare function isAvailable(options?: CompilerOptions): boolean;
 export declare function getVersion(options?: CompilerOptions): Promise<string | null>;

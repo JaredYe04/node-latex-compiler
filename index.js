@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict'
 
-const TectonicCompiler = require('./lib/tectonic-compiler')
+const LatexCompiler = require('./lib/latex-compiler')
 const platformResolver = require('./lib/platform-resolver')
 
 /**
@@ -9,10 +9,10 @@ const platformResolver = require('./lib/platform-resolver')
  * 
  * @param {Object} [options] - Options
  * @param {string} [options.tectonicPath] - Custom path to Tectonic executable
- * @returns {TectonicCompiler} - Compiler instance
+ * @returns {LatexCompiler} - Compiler instance
  */
 function createCompiler (options) {
-  return new TectonicCompiler(options)
+  return new LatexCompiler(options)
 }
 
 /**
@@ -71,7 +71,7 @@ module.exports = {
   compile,
   isAvailable,
   getVersion,
-  TectonicCompiler,
+  LatexCompiler,
   platformResolver
 }
 
