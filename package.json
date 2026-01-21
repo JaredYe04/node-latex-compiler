@@ -1,5 +1,5 @@
 {
-  "name": "node-tectonic-compiler",
+  "name": "node-latex-compiler",
   "version": "0.1.0",
   "tectonicVersion": "0.14.1",
   "description": "Node.js Tectonic LaTeX compiler with automatic binary download. Supports multiple input/output formats (file, text, buffer)",
@@ -7,7 +7,7 @@
   "types": "index.d.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JaredYe04/node-tectonic-compiler.git"
+    "url": "https://github.com/JaredYe04/node-latex-compiler.git"
   },
   "engines": {
     "node": ">= 14.x"
@@ -22,9 +22,10 @@
     "document-compiler"
   ],
   "optionalDependencies": {
-    "@node-tectonic-compiler/bin-win32-x64": "^0.1.0",
-    "@node-tectonic-compiler/bin-darwin-arm64": "^0.1.0",
-    "@node-tectonic-compiler/bin-linux-x64": "^0.1.0"
+    "@node-latex-compiler/bin-win32-x64": "^0.1.0",
+    "@node-latex-compiler/bin-darwin-x64": "^0.1.0",
+    "@node-latex-compiler/bin-darwin-arm64": "^0.1.0",
+    "@node-latex-compiler/bin-linux-x64": "^0.1.0"
   },
   "scripts": {
     "test": "node scripts/test-compilation.js",

@@ -20,6 +20,10 @@ jobs:
             runner: windows-latest
             node-version: '20.x'
           - platform: darwin
+            arch: x64
+            runner: macos-14
+            node-version: '20.x'
+          - platform: darwin
             arch: arm64
             runner: macos-14
             node-version: '20.x'

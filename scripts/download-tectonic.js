@@ -194,7 +194,7 @@ function fetchReleaseAssets () {
     const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
     
     const headers = {
-      'User-Agent': 'node-tectonic-compiler',
+      'User-Agent': 'node-latex-compiler',
       'Accept': 'application/vnd.github.v3+json'
     }
     
@@ -242,7 +242,7 @@ function downloadFile (url, outputPath) {
     const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
     
     const headers = {
-      'User-Agent': 'node-tectonic-compiler',
+      'User-Agent': 'node-latex-compiler',
       'Accept': 'application/octet-stream'
     }
     
@@ -290,77 +290,110 @@ function downloadFile (url, outputPath) {
 
 /**
  * Extract archive
+ * Supports both ZIP and tar.gz formats based on file extension
  */
 function extractArchive (archivePath, extractDir) {
-  if (PLATFORM === 'win32') {
-    // Windows: use PowerShell to extract ZIP
-    // Use single quotes and proper escaping
-    const extractScript = `$archive = '${archivePath.replace(/'/g, "''")}'; $dest = '${extractDir.replace(/'/g, "''")}'; Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory($archive, $dest)`
-    
-    try {
-      execSync(`powershell -NoProfile -Command "${extractScript}"`, { 
-        stdio: 'inherit',
-        cwd: __dirname,
-        timeout: 60000  // 60 second timeout
-      })
+  const isZip = archivePath.toLowerCase().endsWith('.zip')
+  const isTarGz = archivePath.toLowerCase().endsWith('.tar.gz') || archivePath.toLowerCase().endsWith('.tgz')
+  
+  if (isZip) {
+    // Extract ZIP file
+    if (PLATFORM === 'win32') {
+      // Windows: use PowerShell to extract ZIP
+      const extractScript = `$archive = '${archivePath.replace(/'/g, "''")}'; $dest = '${extractDir.replace(/'/g, "''")}'; Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory($archive, $dest)`
       
-      // Verify extraction worked
-      if (!fs.existsSync(extractDir)) {
-        throw new Error(`Extraction directory does not exist: ${extractDir}`)
-      }
-      
-      const entries = fs.readdirSync(extractDir)
-      if (entries.length === 0) {
-        throw new Error(`Extraction directory is empty: ${extractDir}`)
-      }
-      
-      console.log(`Extracted ${entries.length} entries to ${extractDir}`)
-    } catch (error) {
-      console.error('PowerShell extraction failed, trying alternative method...')
-      // Fallback: use yauzl if available, or try a different approach
       try {
-        // Try using yauzl (if installed) or use a simpler PowerShell approach
-        const yauzl = require('yauzl')
-        return new Promise((resolve, reject) => {
-          yauzl.open(archivePath, { lazyEntries: true }, (err, zipfile) => {
-            if (err) return reject(err)
-            zipfile.readEntry()
-            zipfile.on('entry', (entry) => {
-              if (/\/$/.test(entry.fileName)) {
-                // Directory entry
-                const dirPath = path.join(extractDir, entry.fileName)
-                if (!fs.existsSync(dirPath)) {
-                  fs.mkdirSync(dirPath, { recursive: true })
-                }
-                zipfile.readEntry()
-              } else {
-                // File entry
-                zipfile.openReadStream(entry, (err, readStream) => {
-                  if (err) return reject(err)
-                  const filePath = path.join(extractDir, entry.fileName)
-                  const dir = path.dirname(filePath)
-                  if (!fs.existsSync(dir)) {
-                    fs.mkdirSync(dir, { recursive: true })
-                  }
-                  const writeStream = fs.createWriteStream(filePath)
-                  readStream.pipe(writeStream)
-                  writeStream.on('close', () => {
-                    zipfile.readEntry()
-                  })
-                })
-              }
-            })
-            zipfile.on('end', resolve)
-            zipfile.on('error', reject)
-          })
+        execSync(`powershell -NoProfile -Command "${extractScript}"`, { 
+          stdio: 'inherit',
+          cwd: __dirname,
+          timeout: 60000  // 60 second timeout
         })
-      } catch (e) {
-        throw new Error(`Failed to extract archive: ${error.message}. Install yauzl for better extraction support.`)
+        
+        // Verify extraction worked
+        if (!fs.existsSync(extractDir)) {
+          throw new Error(`Extraction directory does not exist: ${extractDir}`)
+        }
+        
+        const entries = fs.readdirSync(extractDir)
+        if (entries.length === 0) {
+          throw new Error(`Extraction directory is empty: ${extractDir}`)
+        }
+        
+        console.log(`Extracted ${entries.length} entries to ${extractDir}`)
+      } catch (error) {
+        console.error('PowerShell extraction failed, trying alternative method...')
+        // Fallback: use yauzl if available
+        try {
+          const yauzl = require('yauzl')
+          return new Promise((resolve, reject) => {
+            yauzl.open(archivePath, { lazyEntries: true }, (err, zipfile) => {
+              if (err) return reject(err)
+              zipfile.readEntry()
+              zipfile.on('entry', (entry) => {
+                if (/\/$/.test(entry.fileName)) {
+                  // Directory entry
+                  const dirPath = path.join(extractDir, entry.fileName)
+                  if (!fs.existsSync(dirPath)) {
+                    fs.mkdirSync(dirPath, { recursive: true })
+                  }
+                  zipfile.readEntry()
+                } else {
+                  // File entry
+                  zipfile.openReadStream(entry, (err, readStream) => {
+                    if (err) return reject(err)
+                    const filePath = path.join(extractDir, entry.fileName)
+                    const dir = path.dirname(filePath)
+                    if (!fs.existsSync(dir)) {
+                      fs.mkdirSync(dir, { recursive: true })
+                    }
+                    const writeStream = fs.createWriteStream(filePath)
+                    readStream.pipe(writeStream)
+                    writeStream.on('close', () => {
+                      zipfile.readEntry()
+                    })
+                  })
+                }
+              })
+              zipfile.on('end', resolve)
+              zipfile.on('error', reject)
+            })
+          })
+        } catch (e) {
+          throw new Error(`Failed to extract ZIP archive: ${error.message}. Install yauzl for better extraction support.`)
+        }
       }
+    } else {
+      // Unix: use unzip
+      execSync(`unzip -q "${archivePath}" -d "${extractDir}"`, { stdio: 'inherit' })
+    }
+  } else if (isTarGz) {
+    // Extract tar.gz file
+    if (PLATFORM === 'win32') {
+      // Windows: try to use tar (available in Windows 10+)
+      // If tar is not available, we'll need a different solution
+      try {
+        execSync(`tar -xzf "${archivePath}" -C "${extractDir}"`, { stdio: 'inherit' })
+      } catch (error) {
+        // Try using 7zip if available (common on Windows)
+        try {
+          execSync(`7z x "${archivePath}" -o"${extractDir}" -y`, { stdio: 'inherit' })
+          // 7z extracts tar.gz in two steps, so we might need to extract the tar file too
+          const tarFiles = fs.readdirSync(extractDir).filter(f => f.endsWith('.tar'))
+          if (tarFiles.length > 0) {
+            const tarPath = path.join(extractDir, tarFiles[0])
+            execSync(`7z x "${tarPath}" -o"${extractDir}" -y`, { stdio: 'inherit' })
+            fs.unlinkSync(tarPath)
+          }
+        } catch (e) {
+          throw new Error(`Failed to extract tar.gz archive on Windows. Please install tar (Windows 10+) or 7zip. Error: ${error.message}`)
+        }
+      }
+    } else {
+      // Unix: use tar
+      execSync(`tar -xzf "${archivePath}" -C "${extractDir}"`, { stdio: 'inherit' })
     }
   } else {
-    // Unix: use tar
-    execSync(`tar -xzf "${archivePath}" -C "${extractDir}"`, { stdio: 'inherit' })
+    throw new Error(`Unsupported archive format: ${archivePath}. Expected .zip or .tar.gz`)
   }
 }
 
@@ -457,7 +490,9 @@ async function main () {
     }
     
     // Find tectonic executable in extracted files
-    const executableName = PLATFORM === 'win32' ? 'tectonic.exe' : 'tectonic'
+    // Use target platform (requirements.platform) not current platform (PLATFORM)
+    // This allows downloading binaries for other platforms (e.g., darwin on Windows)
+    const executableName = requirements.platform === 'win32' ? 'tectonic.exe' : 'tectonic'
     let foundExecutable = null
     
     function findExecutable (dir, depth = 0) {
@@ -471,8 +506,8 @@ async function main () {
           const found = findExecutable(fullPath, depth + 1)
           if (found) return found
         } else {
-          // Case-insensitive match for Windows
-          if (PLATFORM === 'win32') {
+          // Case-insensitive match for Windows (both current platform and target platform)
+          if (PLATFORM === 'win32' || requirements.platform === 'win32') {
             if (file.toLowerCase() === executableName.toLowerCase()) {
               return fullPath
             }
@@ -527,7 +562,17 @@ async function main () {
         foundExecutable = exeFiles[0]
         console.log(`Using: ${foundExecutable}`)
       } else {
-        throw new Error(`Tectonic executable (${executableName}) not found in archive. Found ${allFiles.length} files total.`)
+        // Try to find any executable file (fallback)
+        const anyExecutable = allFiles.find(f => {
+          const name = path.basename(f).toLowerCase()
+          return name === 'tectonic' || name === 'tectonic.exe'
+        })
+        if (anyExecutable) {
+          console.log(`Found executable with different name: ${anyExecutable}`)
+          foundExecutable = anyExecutable
+        } else {
+          throw new Error(`Tectonic executable (${executableName}) not found in archive. Found ${allFiles.length} files total.`)
+        }
       }
     }
     

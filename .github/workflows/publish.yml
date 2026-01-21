@@ -80,7 +80,7 @@ jobs:
           LOCAL_VERSION=$(node -p "require('./package.json').version")
           echo "📦 Local package.json version: $LOCAL_VERSION"
 
-          NPM_VERSION=$(npm view node-tectonic-compiler version 2>/dev/null || echo "")
+          NPM_VERSION=$(npm view node-latex-compiler version 2>/dev/null || echo "")
 
           if [ -z "$NPM_VERSION" ]; then
             echo "📦 No existing version on npm, starting fresh"
@@ -123,12 +123,12 @@ jobs:
           NEW_VERSION=$(node -p "require('./package.json').version")
           echo "🆕 New version: $NEW_VERSION"
 
-          if npm view node-tectonic-compiler@$NEW_VERSION version > /dev/null 2>&1; then
+          if npm view node-latex-compiler@$NEW_VERSION version > /dev/null 2>&1; then
             echo "⚠️  Version $NEW_VERSION already exists, incrementing again..."
             npm version ${{ github.event.inputs.version }} --no-git-tag-version
             NEW_VERSION=$(node -p "require('./package.json').version")
 
-            if npm view node-tectonic-compiler@$NEW_VERSION version > /dev/null 2>&1; then
+            if npm view node-latex-compiler@$NEW_VERSION version > /dev/null 2>&1; then
               echo "❌ Error: Version $NEW_VERSION also exists on npm"
               exit 1
             fi
@@ -145,7 +145,7 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "Release version: $VERSION"
 
-          if npm view node-tectonic-compiler@$VERSION version > /dev/null 2>&1; then
+          if npm view node-latex-compiler@$VERSION version > /dev/null 2>&1; then
             echo "⚠️  Warning: Version $VERSION already exists on npm"
           fi
 
@@ -168,15 +168,19 @@ jobs:
           - platform: linux
             arch: x64
             runner: ubuntu-latest
-            package: '@node-tectonic-compiler/bin-linux-x64'
+            package: '@node-latex-compiler/bin-linux-x64'
           - platform: win32
             arch: x64
             runner: windows-latest
-            package: '@node-tectonic-compiler/bin-win32-x64'
+            package: '@node-latex-compiler/bin-win32-x64'
+          - platform: darwin
+            arch: x64
+            runner: macos-14
+            package: '@node-latex-compiler/bin-darwin-x64'
           - platform: darwin
             arch: arm64
             runner: macos-14
-            package: '@node-tectonic-compiler/bin-darwin-arm64'
+            package: '@node-latex-compiler/bin-darwin-arm64'
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -237,14 +241,15 @@ jobs:
           echo "✓ Binary found at $BINARY"
           
           # Verify binary works
+          # Note: Tectonic doesn't support --version, so we use --help instead
           if [ "${{ matrix.platform }}" = "win32" ]; then
-            "$BINARY" --version || {
+            "$BINARY" --help > /dev/null 2>&1 || {
               echo "❌ Binary verification failed"
               exit 1
             }
           else
             chmod +x "$BINARY"
-            "$BINARY" --version || {
+            "$BINARY" --help > /dev/null 2>&1 || {
               echo "❌ Binary verification failed"
               exit 1
             }
@@ -265,7 +270,7 @@ jobs:
       - name: Create runtime directory
         shell: bash
         run: |
-          mkdir -p runtimes/@node-tectonic-compiler/bin-${{ matrix.platform }}-${{ matrix.arch }}/bin
+          mkdir -p runtimes/@node-latex-compiler/bin-${{ matrix.platform }}-${{ matrix.arch }}/bin
 
       - name: Copy binary to runtime package
         shell: bash
@@ -275,7 +280,7 @@ jobs:
           else
             SOURCE="bin/${{ matrix.platform }}-${{ matrix.arch }}/tectonic"
           fi
-          TARGET="runtimes/@node-tectonic-compiler/bin-${{ matrix.platform }}-${{ matrix.arch }}/bin"
+          TARGET="runtimes/@node-latex-compiler/bin-${{ matrix.platform }}-${{ matrix.arch }}/bin"
           
           cp "$SOURCE" "$TARGET/" || {
             echo "❌ Failed to copy binary"
@@ -309,24 +314,24 @@ jobs:
       - name: Check npm organization exists
         shell: bash
         run: |
-          echo "🔍 Checking if npm organization @node-tectonic-compiler exists..."
+          echo "🔍 Checking if npm organization @node-latex-compiler exists..."
           
-          ERROR_OUTPUT=$(npm view @node-tectonic-compiler/bin-linux-x64@999.0.0 2>&1 || true)
+          ERROR_OUTPUT=$(npm view @node-latex-compiler/bin-linux-x64@999.0.0 2>&1 || true)
           
           if echo "$ERROR_OUTPUT" | grep -q "Scope not found"; then
             echo ""
-            echo "❌ ERROR: npm organization @node-tectonic-compiler does not exist!"
+            echo "❌ ERROR: npm organization @node-latex-compiler does not exist!"
             echo ""
             echo "📝 You must create the npm organization before publishing runtime packages."
             echo ""
             echo "   Quick setup:"
             echo "   1. Go to: https://www.npmjs.com/org/create"
-            echo "   2. Create organization: node-tectonic-compiler"
+            echo "   2. Create organization: node-latex-compiler"
             echo "   3. Choose 'Public' (free for public packages)"
             echo ""
             exit 1
           elif echo "$ERROR_OUTPUT" | grep -q "not in this registry\|404"; then
-            echo "✅ npm organization @node-tectonic-compiler exists"
+            echo "✅ npm organization @node-latex-compiler exists"
           else
             echo "⚠️  Could not definitively verify organization, but continuing..."
           fi
@@ -355,7 +360,7 @@ jobs:
         shell: bash
         run: |
           echo "📦 Publishing ${{ matrix.package }}@${{ needs.prepare.outputs.version }}..."
-          cd runtimes/@node-tectonic-compiler/bin-${{ matrix.platform }}-${{ matrix.arch }}
+          cd runtimes/@node-latex-compiler/bin-${{ matrix.platform }}-${{ matrix.arch }}
           npm publish --access public
           echo "✅ Published ${{ matrix.package }}@${{ needs.prepare.outputs.version }}"
         env:
@@ -418,9 +423,10 @@ jobs:
             const version = '$VERSION';
             
             pkg.optionalDependencies = {
-              '@node-tectonic-compiler/bin-win32-x64': '^' + version,
-              '@node-tectonic-compiler/bin-darwin-arm64': '^' + version,
-              '@node-tectonic-compiler/bin-linux-x64': '^' + version
+              '@node-latex-compiler/bin-win32-x64': '^' + version,
+              '@node-latex-compiler/bin-darwin-x64': '^' + version,
+              '@node-latex-compiler/bin-darwin-arm64': '^' + version,
+              '@node-latex-compiler/bin-linux-x64': '^' + version
             };
             
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
@@ -443,7 +449,7 @@ jobs:
           VERSION="${{ needs.prepare.outputs.version }}"
           echo "📦 Preparing to publish main package version: $VERSION"
 
-          if npm view node-tectonic-compiler@$VERSION version > /dev/null 2>&1; then
+          if npm view node-latex-compiler@$VERSION version > /dev/null 2>&1; then
             echo "❌ Error: Version $VERSION already exists on npm registry"
             exit 1
           fi

@@ -1,10 +1,10 @@
 <div align="center">
 
-# 🚀 node-tectonic-compiler
+# 🚀 node-latex-compiler
 
 **The Ultimate LaTeX Compiler for Node.js - Zero Configuration, Zero Dependencies**
 
-[![npm version](https://img.shields.io/npm/v/node-tectonic-compiler.svg)](https://www.npmjs.com/package/node-tectonic-compiler)
+[![npm version](https://img.shields.io/npm/v/node-latex-compiler.svg)](https://www.npmjs.com/package/node-latex-compiler)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D14.x-brightgreen.svg)](https://nodejs.org/)
 
@@ -23,7 +23,7 @@
 
 ### What Makes This Special?
 
-**node-tectonic-compiler** is a powerful, zero-configuration LaTeX compiler wrapper that brings the full power of [Tectonic](https://tectonic-typesetting.github.io/) to your Node.js applications. Unlike traditional LaTeX distributions, it requires **zero setup** and **zero system dependencies**.
+**node-latex-compiler** is a powerful, zero-configuration LaTeX compiler wrapper that brings the full power of [Tectonic](https://tectonic-typesetting.github.io/) to your Node.js applications. Unlike traditional LaTeX distributions, it requires **zero setup** and **zero system dependencies**.
 
 #### 🎯 Key Features
 
@@ -40,7 +40,7 @@
 #### Installation
 
 ```bash
-npm install node-tectonic-compiler
+npm install node-latex-compiler
 ```
 
 That's it! The package automatically downloads the correct binary for your platform during installation. No manual setup required.
@@ -50,7 +50,7 @@ That's it! The package automatically downloads the correct binary for your platf
 **Compile from a file:**
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 
 const result = await compile({
   texFile: './document.tex',
@@ -67,7 +67,7 @@ if (result.status === 'success') {
 **Compile from text string:**
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 
 const tex = `\\documentclass{article}
 \\usepackage{amsmath}
@@ -88,7 +88,7 @@ const result = await compile({
 **Get PDF as Buffer (for in-memory processing):**
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 const fs = require('fs')
 
 const result = await compile({
@@ -106,7 +106,7 @@ if (result.status === 'success') {
 **Real-time compilation feedback:**
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 
 const result = await compile({
   tex: tex,
@@ -158,7 +158,7 @@ interface CompileResult {
 Create a compiler instance for advanced usage.
 
 ```javascript
-const { createCompiler } = require('node-tectonic-compiler')
+const { createCompiler } = require('node-latex-compiler')
 
 const compiler = createCompiler({
   tectonicPath: '/custom/path/to/tectonic'  // Optional
@@ -172,7 +172,7 @@ const result = await compiler.compile({ tex: '...', outputDir: './output' })
 Check if Tectonic is available on the system.
 
 ```javascript
-const { isAvailable } = require('node-tectonic-compiler')
+const { isAvailable } = require('node-latex-compiler')
 
 if (isAvailable()) {
   console.log('✅ Tectonic is ready to use!')
@@ -184,7 +184,7 @@ if (isAvailable()) {
 Get the version of the installed Tectonic binary.
 
 ```javascript
-const { getVersion } = require('node-tectonic-compiler')
+const { getVersion } = require('node-latex-compiler')
 
 const version = await getVersion()
 console.log('Tectonic version:', version)
@@ -205,7 +205,7 @@ const result = await compile({
 #### Compile and upload to cloud storage
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 const AWS = require('aws-sdk')
 
 const result = await compile({
@@ -226,7 +226,7 @@ if (result.status === 'success') {
 #### Batch compilation
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 const files = ['doc1.tex', 'doc2.tex', 'doc3.tex']
 
 const results = await Promise.all(
@@ -283,7 +283,7 @@ MIT
 
 ### 为什么选择这个包？
 
-**node-tectonic-compiler** 是一个强大的、零配置的 LaTeX 编译器封装，将 [Tectonic](https://tectonic-typesetting.github.io/) 的强大功能带到您的 Node.js 应用中。与传统的 LaTeX 发行版不同，它**无需任何设置**，**无需系统依赖**。
+**node-latex-compiler** 是一个强大的、零配置的 LaTeX 编译器封装，将 [Tectonic](https://tectonic-typesetting.github.io/) 的强大功能带到您的 Node.js 应用中。与传统的 LaTeX 发行版不同，它**无需任何设置**，**无需系统依赖**。
 
 #### 🎯 核心特性
 
@@ -300,7 +300,7 @@ MIT
 #### 安装
 
 ```bash
-npm install node-tectonic-compiler
+npm install node-latex-compiler
 ```
 
 就这么简单！包会在安装时自动为您的平台下载正确的二进制文件。无需手动设置。
@@ -310,7 +310,7 @@ npm install node-tectonic-compiler
 **从文件编译：**
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 
 const result = await compile({
   texFile: './document.tex',
@@ -327,7 +327,7 @@ if (result.status === 'success') {
 **从文本字符串编译：**
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 
 const tex = `\\documentclass{article}
 \\usepackage{amsmath}
@@ -348,7 +348,7 @@ const result = await compile({
 **获取 PDF Buffer（用于内存处理）：**
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 const fs = require('fs')
 
 const result = await compile({
@@ -366,7 +366,7 @@ if (result.status === 'success') {
 **实时编译反馈：**
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 
 const result = await compile({
   tex: tex,
@@ -418,7 +418,7 @@ interface CompileResult {
 创建编译器实例用于高级用法。
 
 ```javascript
-const { createCompiler } = require('node-tectonic-compiler')
+const { createCompiler } = require('node-latex-compiler')
 
 const compiler = createCompiler({
   tectonicPath: '/custom/path/to/tectonic'  // 可选
@@ -432,7 +432,7 @@ const result = await compiler.compile({ tex: '...', outputDir: './output' })
 检查系统上是否可用 Tectonic。
 
 ```javascript
-const { isAvailable } = require('node-tectonic-compiler')
+const { isAvailable } = require('node-latex-compiler')
 
 if (isAvailable()) {
   console.log('✅ Tectonic 已就绪！')
@@ -444,7 +444,7 @@ if (isAvailable()) {
 获取已安装的 Tectonic 二进制文件的版本。
 
 ```javascript
-const { getVersion } = require('node-tectonic-compiler')
+const { getVersion } = require('node-latex-compiler')
 
 const version = await getVersion()
 console.log('Tectonic 版本:', version)
@@ -465,7 +465,7 @@ const result = await compile({
 #### 编译并上传到云存储
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 const AWS = require('aws-sdk')
 
 const result = await compile({
@@ -486,7 +486,7 @@ if (result.status === 'success') {
 #### 批量编译
 
 ```javascript
-const { compile } = require('node-tectonic-compiler')
+const { compile } = require('node-latex-compiler')
 const files = ['doc1.tex', 'doc2.tex', 'doc3.tex']
 
 const results = await Promise.all(
@@ -542,6 +542,6 @@ MIT
 
 **Made with ❤️ for the LaTeX community**
 
-[Report Bug](https://github.com/JaredYe04/node-tectonic-compiler/issues) · [Request Feature](https://github.com/JaredYe04/node-tectonic-compiler/issues)
+[Report Bug](https://github.com/JaredYe04/node-latex-compiler/issues) · [Request Feature](https://github.com/JaredYe04/node-latex-compiler/issues)
 
 </div>

@@ -14,7 +14,7 @@ const path = require('path')
 const PLATFORM = process.argv[2]
 const ARCH = process.argv[3]
 const VERSION = process.argv[4]
-const OUTPUT_DIR = process.argv[5] || path.join(__dirname, '..', 'runtimes', '@node-tectonic-compiler', 'bin-' + PLATFORM + '-' + ARCH)
+const OUTPUT_DIR = process.argv[5] || path.join(__dirname, '..', 'runtimes', '@node-latex-compiler', 'bin-' + PLATFORM + '-' + ARCH)
 
 if (!PLATFORM || !ARCH || !VERSION) {
   console.error('Usage: node scripts/create-runtime-package-json.js <platform> <arch> <version> [output-dir]')
@@ -37,12 +37,12 @@ if (ARCH === 'x86_64' || ARCH === 'amd64') {
   normalizedArch = 'arm64'
 }
 
-const packageName = '@node-tectonic-compiler/bin-' + normalizedPlatform + '-' + normalizedArch
+const packageName = '@node-latex-compiler/bin-' + normalizedPlatform + '-' + normalizedArch
 
 const packageJson = {
   name: packageName,
   version: VERSION,
-  description: 'Tectonic binary for node-tectonic-compiler on ' + normalizedPlatform + ' ' + normalizedArch,
+  description: 'Tectonic binary for node-latex-compiler on ' + normalizedPlatform + ' ' + normalizedArch,
   os: [normalizedPlatform],
   cpu: [normalizedArch],
   keywords: [
@@ -58,7 +58,7 @@ const packageJson = {
   repository: {
     type: 'git',
     url: '',
-    directory: 'runtimes/@node-tectonic-compiler/bin-' + normalizedPlatform + '-' + normalizedArch
+    directory: 'runtimes/@node-latex-compiler/bin-' + normalizedPlatform + '-' + normalizedArch
   },
   license: 'MIT',
   author: ''
