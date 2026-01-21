@@ -316,9 +316,15 @@ jobs:
         run: |
           echo "🔍 Checking if npm organization @node-latex-compiler exists..."
           
+          # Try to check organization membership or package scope
+          # Method 1: Try to view a non-existent package in the scope
           ERROR_OUTPUT=$(npm view @node-latex-compiler/bin-linux-x64@999.0.0 2>&1 || true)
           
-          if echo "$ERROR_OUTPUT" | grep -q "Scope not found"; then
+          # Method 2: Try to check organization directly via npm org command
+          ORG_CHECK=$(npm org ls @node-latex-compiler 2>&1 || true)
+          
+          # Check for "Scope not found" error (most reliable indicator)
+          if echo "$ERROR_OUTPUT" | grep -qi "Scope not found\|scope.*not.*found"; then
             echo ""
             echo "❌ ERROR: npm organization @node-latex-compiler does not exist!"
             echo ""
@@ -328,12 +334,20 @@ jobs:
             echo "   1. Go to: https://www.npmjs.com/org/create"
             echo "   2. Create organization: node-latex-compiler"
             echo "   3. Choose 'Public' (free for public packages)"
+            echo "   4. Add your npm user as a member with publish permissions"
+            echo ""
+            echo "   After creating the organization, re-run this workflow."
             echo ""
             exit 1
-          elif echo "$ERROR_OUTPUT" | grep -q "not in this registry\|404"; then
-            echo "✅ npm organization @node-latex-compiler exists"
+          elif echo "$ERROR_OUTPUT" | grep -q "not in this registry\|404\|No matching version"; then
+            echo "✅ npm organization @node-latex-compiler exists (package not found is expected)"
+          elif echo "$ORG_CHECK" | grep -q "You are not a member"; then
+            echo "⚠️  Organization exists but you may not have publish permissions"
+            echo "   Continuing anyway - publish will fail if permissions are insufficient"
           else
-            echo "⚠️  Could not definitively verify organization, but continuing..."
+            echo "⚠️  Could not definitively verify organization"
+            echo "   Error output: $ERROR_OUTPUT"
+            echo "   Continuing - publish will fail if organization doesn't exist"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
