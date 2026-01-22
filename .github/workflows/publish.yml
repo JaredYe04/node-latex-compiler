@@ -417,9 +417,11 @@ jobs:
             echo "This might be intentional if version was manually changed"
           fi
           
-          # Verify version format (semver)
-          if ! node -e "require('semver').valid('$VERSION')" 2>/dev/null; then
-            echo "❌ Error: Invalid semver version: $VERSION"
+          # Verify version format (semver) - use regex instead of semver module
+          # Basic semver pattern: major.minor.patch[-prerelease][+build]
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*)?(\+[0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*)?$'; then
+            echo "❌ Error: Invalid semver version format: $VERSION"
+            echo "Version must match pattern: major.minor.patch[-prerelease][+build]"
             exit 1
           fi
           
