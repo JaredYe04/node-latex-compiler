@@ -296,8 +296,31 @@ jobs:
       - name: Create package.json for runtime
         shell: bash
         run: |
-          echo "📝 Creating package.json for ${{ matrix.package }}..."
-          node scripts/create-runtime-package-json.js ${{ matrix.platform }} ${{ matrix.arch }} ${{ needs.prepare.outputs.version }}
+          VERSION="${{ needs.prepare.outputs.version }}"
+          if [ -z "$VERSION" ]; then
+            echo "❌ Error: Version is empty or not set"
+            echo "Available outputs from prepare job:"
+            echo "  version: ${{ needs.prepare.outputs.version }}"
+            exit 1
+          fi
+          echo "📝 Creating package.json for ${{ matrix.package }}@$VERSION..."
+          node scripts/create-runtime-package-json.js ${{ matrix.platform }} ${{ matrix.arch }} "$VERSION"
+          
+          # Verify the created package.json has a valid version
+          PACKAGE_JSON="runtimes/@node-latex-compiler/bin-${{ matrix.platform }}-${{ matrix.arch }}/package.json"
+          if [ ! -f "$PACKAGE_JSON" ]; then
+            echo "❌ Error: package.json was not created at $PACKAGE_JSON"
+            exit 1
+          fi
+          
+          CREATED_VERSION=$(node -p "require('./$PACKAGE_JSON').version" 2>/dev/null || echo "")
+          if [ -z "$CREATED_VERSION" ]; then
+            echo "❌ Error: Version in package.json is empty"
+            echo "Package.json content:"
+            cat "$PACKAGE_JSON"
+            exit 1
+          fi
+          echo "✅ Verified package.json version: $CREATED_VERSION"
 
       - name: Verify NPM authentication
         shell: bash
@@ -369,12 +392,56 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         continue-on-error: true
 
+      - name: Verify package.json before publish
+        shell: bash
+        run: |
+          PACKAGE_JSON="runtimes/@node-latex-compiler/bin-${{ matrix.platform }}-${{ matrix.arch }}/package.json"
+          if [ ! -f "$PACKAGE_JSON" ]; then
+            echo "❌ Error: package.json not found at $PACKAGE_JSON"
+            exit 1
+          fi
+          
+          # Verify version is valid
+          VERSION=$(node -p "require('./$PACKAGE_JSON').version" 2>/dev/null || echo "")
+          if [ -z "$VERSION" ]; then
+            echo "❌ Error: Version is empty in package.json"
+            echo "Package.json content:"
+            cat "$PACKAGE_JSON"
+            exit 1
+          fi
+          
+          # Verify version matches expected version
+          EXPECTED_VERSION="${{ needs.prepare.outputs.version }}"
+          if [ "$VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "⚠️  Warning: Version mismatch. Expected: $EXPECTED_VERSION, Found: $VERSION"
+            echo "This might be intentional if version was manually changed"
+          fi
+          
+          # Verify version format (semver)
+          if ! node -e "require('semver').valid('$VERSION')" 2>/dev/null; then
+            echo "❌ Error: Invalid semver version: $VERSION"
+            exit 1
+          fi
+          
+          echo "✅ Package.json is valid"
+          echo "  Package: $(node -p "require('./$PACKAGE_JSON').name")"
+          echo "  Version: $VERSION"
+
       - name: Publish runtime package
         if: steps.check-version.outputs.exists != 'true'
         shell: bash
         run: |
           echo "📦 Publishing ${{ matrix.package }}@${{ needs.prepare.outputs.version }}..."
           cd runtimes/@node-latex-compiler/bin-${{ matrix.platform }}-${{ matrix.arch }}
+          
+          # Final verification before publish
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if [ -z "$PACKAGE_VERSION" ]; then
+            echo "❌ Error: Version is empty in package.json before publish"
+            cat package.json
+            exit 1
+          fi
+          
           npm publish --access public
           echo "✅ Published ${{ matrix.package }}@${{ needs.prepare.outputs.version }}"
         env:
