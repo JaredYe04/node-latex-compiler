@@ -3,7 +3,7 @@
 
 /**
  * Test script to verify compilation pipeline
- * Tests file input, text input, and buffer output
+ * Tests file input, text input, buffer output, and ENOTDIR error handling
  */
 
 const fs = require('fs')
@@ -215,6 +215,147 @@ async function testVersionCheck () {
   }
 }
 
+// ENOTDIR error handling tests
+const TEST_TEX_SIMPLE = `\\documentclass{article}
+\\begin{document}
+Hello, World! Test document.
+\\end{document}`
+
+async function testTempDirAsFile () {
+  console.log('\n🧪 Test 7: ENOTDIR - __latex_compile_temp__ exists as a file')
+  
+  const tempDir = path.join(__dirname, '..', '__latex_compile_temp__')
+  
+  // Cleanup first
+  if (fs.existsSync(tempDir)) {
+    const stats = fs.statSync(tempDir)
+    if (stats.isDirectory()) {
+      fs.rmSync(tempDir, { recursive: true, force: true })
+    } else {
+      fs.unlinkSync(tempDir)
+    }
+  }
+  
+  // Create temp as a file
+  fs.writeFileSync(tempDir, 'test file content')
+  console.log(`   Created file: ${tempDir}`)
+  
+  try {
+    const result = await compile({
+      tex: TEST_TEX_SIMPLE,
+      returnBuffer: true
+    })
+    
+    console.log(`   ❌ Should have thrown ENOTDIR error`)
+    return false
+  } catch (error) {
+    if (error.message.includes('ENOTDIR') || error.message.includes('not a directory')) {
+      console.log(`   ✅ Correctly caught ENOTDIR error`)
+      return true
+    } else {
+      console.log(`   ❌ Wrong error type: ${error.message}`)
+      return false
+    }
+  } finally {
+    // Cleanup
+    if (fs.existsSync(tempDir)) {
+      fs.unlinkSync(tempDir)
+    }
+  }
+}
+
+async function testOutputDirAsFile () {
+  console.log('\n🧪 Test 8: ENOTDIR - outputDir exists as a file')
+  
+  const outputDir = path.join(__dirname, '..', 'test-enotdir-output')
+  
+  // Cleanup first
+  if (fs.existsSync(outputDir)) {
+    const stats = fs.statSync(outputDir)
+    if (stats.isDirectory()) {
+      fs.rmSync(outputDir, { recursive: true, force: true })
+    } else {
+      fs.unlinkSync(outputDir)
+    }
+  }
+  
+  // Create outputDir as a file
+  fs.writeFileSync(outputDir, 'test file content')
+  console.log(`   Created file: ${outputDir}`)
+  
+  try {
+    const result = await compile({
+      tex: TEST_TEX_SIMPLE,
+      outputDir: outputDir
+    })
+    
+    console.log(`   ❌ Should have thrown ENOTDIR error`)
+    return false
+  } catch (error) {
+    if (error.message.includes('ENOTDIR') || error.message.includes('not a directory')) {
+      console.log(`   ✅ Correctly caught ENOTDIR error`)
+      return true
+    } else {
+      console.log(`   ❌ Wrong error type: ${error.message}`)
+      return false
+    }
+  } finally {
+    // Cleanup
+    if (fs.existsSync(outputDir)) {
+      fs.unlinkSync(outputDir)
+    }
+  }
+}
+
+async function testOutputFileParentAsFile () {
+  console.log('\n🧪 Test 9: ENOTDIR - outputFile parent directory exists as a file')
+  
+  const parentDir = path.join(__dirname, '..', 'test-enotdir-parent')
+  const outputFile = path.join(parentDir, 'subdir', 'output.pdf')
+  
+  // Cleanup first
+  if (fs.existsSync(parentDir)) {
+    const stats = fs.statSync(parentDir)
+    if (stats.isDirectory()) {
+      fs.rmSync(parentDir, { recursive: true, force: true })
+    } else {
+      fs.unlinkSync(parentDir)
+    }
+  }
+  
+  // Create parentDir as a file
+  fs.writeFileSync(parentDir, 'test file content')
+  console.log(`   Created file: ${parentDir}`)
+  
+  try {
+    const result = await compile({
+      tex: TEST_TEX_SIMPLE,
+      outputFile: outputFile
+    })
+    
+    console.log(`   ❌ Should have thrown ENOTDIR error`)
+    return false
+  } catch (error) {
+    if (error.message.includes('ENOTDIR') || error.message.includes('not a directory')) {
+      console.log(`   ✅ Correctly caught ENOTDIR error`)
+      return true
+    } else {
+      console.log(`   ❌ Wrong error type: ${error.message}`)
+      return false
+    }
+  } finally {
+    // Cleanup
+    if (fs.existsSync(parentDir)) {
+      const stats = fs.statSync(parentDir)
+      if (stats.isDirectory()) {
+        fs.rmSync(parentDir, { recursive: true, force: true })
+      } else {
+        fs.unlinkSync(parentDir)
+      }
+    }
+  }
+}
+
 async function main () {
   console.log('🧪 Running Tectonic Compiler Tests')
   console.log('=====================================')
@@ -235,6 +376,11 @@ async function main () {
   results.push(await testBufferOutput())
   results.push(await testStdoutStderr())
   results.push(await testErrorHandling())
+  
+  // ENOTDIR error handling tests
+  results.push(await testTempDirAsFile())
+  results.push(await testOutputDirAsFile())
+  results.push(await testOutputFileParentAsFile())
   
   console.log('\n=====================================')
   const passed = results.filter(r => r).length
