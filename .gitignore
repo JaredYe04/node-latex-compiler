@@ -1,7 +1,7 @@
 node_modules/
 test-output/
 temp-download/
-temp/
+__latex_compile_temp__/
 bin/
 *.log
 .DS_Store
