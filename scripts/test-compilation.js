@@ -222,7 +222,7 @@ Hello, World! Test document.
 \\end{document}`
 
 async function testTempDirAsFile () {
-  console.log('\n🧪 Test 7: ENOTDIR - __latex_compile_temp__ exists as a file')
+  console.log('\n🧪 Test 7: Auto-fix - __latex_compile_temp__ exists as a file')
   
   const tempDir = path.join(__dirname, '..', '__latex_compile_temp__')
   
@@ -232,7 +232,11 @@ async function testTempDirAsFile () {
     if (stats.isDirectory()) {
       fs.rmSync(tempDir, { recursive: true, force: true })
     } else {
-      fs.unlinkSync(tempDir)
+      try {
+        fs.unlinkSync(tempDir)
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
   }
   
@@ -246,26 +250,43 @@ async function testTempDirAsFile () {
       returnBuffer: true
     })
     
-    console.log(`   ❌ Should have thrown ENOTDIR error`)
-    return false
-  } catch (error) {
-    if (error.message.includes('ENOTDIR') || error.message.includes('not a directory')) {
-      console.log(`   ✅ Correctly caught ENOTDIR error`)
-      return true
+    // Check if tempDir was automatically fixed (converted to directory)
+    if (fs.existsSync(tempDir)) {
+      const stats = fs.statSync(tempDir)
+      if (stats.isDirectory()) {
+        console.log(`   ✅ Auto-fixed: file was converted to directory`)
+        console.log(`   ✅ Compilation successful`)
+        return true
+      } else {
+        console.log(`   ❌ File still exists, not converted to directory`)
+        return false
+      }
     } else {
-      console.log(`   ❌ Wrong error type: ${error.message}`)
+      console.log(`   ❌ Temp directory doesn't exist after compilation`)
       return false
     }
+  } catch (error) {
+    console.log(`   ❌ Error during compilation: ${error.message}`)
+    return false
   } finally {
     // Cleanup
     if (fs.existsSync(tempDir)) {
-      fs.unlinkSync(tempDir)
+      try {
+        const stats = fs.statSync(tempDir)
+        if (stats.isDirectory()) {
+          fs.rmSync(tempDir, { recursive: true, force: true })
+        } else {
+          fs.unlinkSync(tempDir)
+        }
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
   }
 }
 
 async function testOutputDirAsFile () {
-  console.log('\n🧪 Test 8: ENOTDIR - outputDir exists as a file')
+  console.log('\n🧪 Test 8: Auto-fix - outputDir exists as a file')
   
   const outputDir = path.join(__dirname, '..', 'test-enotdir-output')
   
@@ -275,7 +296,11 @@ async function testOutputDirAsFile () {
     if (stats.isDirectory()) {
       fs.rmSync(outputDir, { recursive: true, force: true })
     } else {
-      fs.unlinkSync(outputDir)
+      try {
+        fs.unlinkSync(outputDir)
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
   }
   
@@ -289,26 +314,43 @@ async function testOutputDirAsFile () {
       outputDir: outputDir
     })
     
-    console.log(`   ❌ Should have thrown ENOTDIR error`)
-    return false
-  } catch (error) {
-    if (error.message.includes('ENOTDIR') || error.message.includes('not a directory')) {
-      console.log(`   ✅ Correctly caught ENOTDIR error`)
-      return true
+    // Check if outputDir was automatically fixed
+    if (fs.existsSync(outputDir)) {
+      const stats = fs.statSync(outputDir)
+      if (stats.isDirectory() && result.status === 'success') {
+        console.log(`   ✅ Auto-fixed: file was converted to directory`)
+        console.log(`   ✅ Compilation successful`)
+        return true
+      } else {
+        console.log(`   ❌ File still exists or compilation failed`)
+        return false
+      }
     } else {
-      console.log(`   ❌ Wrong error type: ${error.message}`)
+      console.log(`   ❌ Output directory doesn't exist after compilation`)
       return false
     }
+  } catch (error) {
+    console.log(`   ❌ Error during compilation: ${error.message}`)
+    return false
   } finally {
     // Cleanup
     if (fs.existsSync(outputDir)) {
-      fs.unlinkSync(outputDir)
+      try {
+        const stats = fs.statSync(outputDir)
+        if (stats.isDirectory()) {
+          fs.rmSync(outputDir, { recursive: true, force: true })
+        } else {
+          fs.unlinkSync(outputDir)
+        }
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
   }
 }
 
 async function testOutputFileParentAsFile () {
-  console.log('\n🧪 Test 9: ENOTDIR - outputFile parent directory exists as a file')
+  console.log('\n🧪 Test 9: Auto-fix - outputFile parent directory exists as a file')
   
   const parentDir = path.join(__dirname, '..', 'test-enotdir-parent')
   const outputFile = path.join(parentDir, 'subdir', 'output.pdf')
@@ -319,7 +361,11 @@ async function testOutputFileParentAsFile () {
     if (stats.isDirectory()) {
       fs.rmSync(parentDir, { recursive: true, force: true })
     } else {
-      fs.unlinkSync(parentDir)
+      try {
+        fs.unlinkSync(parentDir)
+      } catch (e) {
+        // Ignore cleanup errors
+      }
     }
   }
   
@@ -333,25 +379,109 @@ async function testOutputFileParentAsFile () {
       outputFile: outputFile
     })
     
-    console.log(`   ❌ Should have thrown ENOTDIR error`)
-    return false
-  } catch (error) {
-    if (error.message.includes('ENOTDIR') || error.message.includes('not a directory')) {
-      console.log(`   ✅ Correctly caught ENOTDIR error`)
-      return true
+    // Check if parentDir was automatically fixed
+    if (fs.existsSync(parentDir)) {
+      const stats = fs.statSync(parentDir)
+      if (stats.isDirectory() && result.status === 'success') {
+        console.log(`   ✅ Auto-fixed: parent file was converted to directory`)
+        console.log(`   ✅ Compilation successful`)
+        return true
+      } else {
+        console.log(`   ❌ Parent still exists as file or compilation failed`)
+        return false
+      }
     } else {
-      console.log(`   ❌ Wrong error type: ${error.message}`)
+      console.log(`   ❌ Parent directory doesn't exist after compilation`)
       return false
     }
+  } catch (error) {
+    console.log(`   ❌ Error during compilation: ${error.message}`)
+    return false
   } finally {
     // Cleanup
     if (fs.existsSync(parentDir)) {
-      const stats = fs.statSync(parentDir)
-      if (stats.isDirectory()) {
-        fs.rmSync(parentDir, { recursive: true, force: true })
-      } else {
-        fs.unlinkSync(parentDir)
+      try {
+        const stats = fs.statSync(parentDir)
+        if (stats.isDirectory()) {
+          fs.rmSync(parentDir, { recursive: true, force: true })
+        } else {
+          fs.unlinkSync(parentDir)
+        }
+      } catch (e) {
+        // Ignore cleanup errors
       }
+    }
+  }
+}
+
+async function testTempDirParentAsFile () {
+  console.log('\n🧪 Test 10: Auto-fix - temp directory parent exists as a file')
+  
+  // This test simulates the scenario where the project root directory is a file
+  // We'll create a file where the temp directory's parent should be
+  const projectRoot = path.join(__dirname, '..')
+  const tempDirName = '__latex_compile_temp__'
+  const tempDirParentFile = path.join(projectRoot, tempDirName + '_parent_file')
+  
+  // Cleanup first
+  if (fs.existsSync(tempDirParentFile)) {
+    fs.unlinkSync(tempDirParentFile)
+  }
+  
+  // Note: We can't actually test this scenario easily because we can't replace the project root
+  // But we can test a similar scenario by creating a file in a subdirectory
+  // and trying to create a directory structure that would require going through that file
+  
+  // Instead, let's test the scenario where a parent of the project root might be a file
+  // This is more realistic - e.g., if someone accidentally created a file named like a directory
+  
+  // For a more realistic test, let's create a nested structure where a parent is a file
+  const testBaseDir = path.join(__dirname, '..', 'test-enotdir-nested')
+  const fileAsParent = path.join(testBaseDir, 'file-as-parent')
+  const nestedDir = path.join(fileAsParent, 'nested', 'dir')
+  
+  // Cleanup
+  if (fs.existsSync(testBaseDir)) {
+    fs.rmSync(testBaseDir, { recursive: true, force: true })
+  }
+  
+  // Create base directory
+  fs.mkdirSync(testBaseDir, { recursive: true })
+  
+  // Create a file where a directory should be
+  fs.writeFileSync(fileAsParent, 'test file content')
+  console.log(`   Created file: ${fileAsParent}`)
+  console.log(`   Attempting to create nested path: ${nestedDir}`)
+  
+  try {
+    // Try to compile with outputDir that requires going through the file
+    const result = await compile({
+      tex: TEST_TEX_SIMPLE,
+      outputDir: nestedDir
+    })
+    
+    // Check if the file was automatically fixed
+    if (fs.existsSync(fileAsParent)) {
+      const stats = fs.statSync(fileAsParent)
+      if (stats.isDirectory() && result.status === 'success') {
+        console.log(`   ✅ Auto-fixed: parent file was converted to directory`)
+        console.log(`   ✅ Compilation successful`)
+        return true
+      } else {
+        console.log(`   ❌ Parent still exists as file or compilation failed`)
+        return false
+      }
+    } else {
+      console.log(`   ❌ Parent doesn't exist after compilation`)
+      return false
+    }
+  } catch (error) {
+    console.log(`   ❌ Error during compilation: ${error.message}`)
+    return false
+  } finally {
+    // Cleanup
+    if (fs.existsSync(testBaseDir)) {
+      fs.rmSync(testBaseDir, { recursive: true, force: true })
     }
   }
 }
@@ -381,6 +511,7 @@ async function main () {
   results.push(await testTempDirAsFile())
   results.push(await testOutputDirAsFile())
   results.push(await testOutputFileParentAsFile())
+  results.push(await testTempDirParentAsFile())
   
   console.log('\n=====================================')
   const passed = results.filter(r => r).length
