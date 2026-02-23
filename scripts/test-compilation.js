@@ -8,6 +8,7 @@
 
 const fs = require('fs')
 const path = require('path')
+const os = require('os')
 const { createCompiler, compile } = require('../index')
 
 const TEST_TEX = `\\documentclass{article}
@@ -212,6 +213,51 @@ async function testVersionCheck () {
   } catch (error) {
     console.log(`❌ Error: ${error.message}`)
     return false
+  }
+}
+
+async function testCrossDeviceMove () {
+  console.log('\n🔄 Test: Cross-device move (EXDEV)')
+  const pkgRoot = path.join(__dirname, '..')
+  const tempDirRoot = path.parse(path.join(pkgRoot, '__latex_compile_temp__')).root
+  const otherRoot = path.parse(os.tmpdir()).root
+  if (tempDirRoot.toLowerCase() === otherRoot.toLowerCase()) {
+    console.log('   ⏭️  Same drive, skipping (no EXDEV scenario)')
+    return true
+  }
+  const outputFile = path.join(os.tmpdir(), 'node-latex-compiler-exdev-test.pdf')
+  try {
+    const result = await compile({
+      tex: TEST_TEX,
+      outputFile: outputFile
+    })
+    if (result.status !== 'success' || !result.pdfPath) {
+      console.log(`   ❌ Compilation failed: ${JSON.stringify(result)}`)
+      return false
+    }
+    if (!fs.existsSync(result.pdfPath)) {
+      console.log(`   ❌ PDF not found: ${result.pdfPath}`)
+      return false
+    }
+    const size = fs.statSync(result.pdfPath).size
+    if (size <= 0) {
+      console.log(`   ❌ PDF empty`)
+      return false
+    }
+    console.log(`   ✅ Cross-device move OK (temp on ${tempDirRoot}, output on ${otherRoot})`)
+    console.log(`   PDF: ${result.pdfPath}, size: ${size} bytes`)
+    return true
+  } catch (error) {
+    console.log(`   ❌ Error: ${error.message}`)
+    return false
+  } finally {
+    if (fs.existsSync(outputFile)) {
+      try {
+        fs.unlinkSync(outputFile)
+      } catch (e) {
+        // ignore
+      }
+    }
   }
 }
 
@@ -506,6 +552,7 @@ async function main () {
   results.push(await testBufferOutput())
   results.push(await testStdoutStderr())
   results.push(await testErrorHandling())
+  results.push(await testCrossDeviceMove())
   
   // ENOTDIR error handling tests
   results.push(await testTempDirAsFile())
